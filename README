@@ -1,0 +1,60 @@
+= Presentation Maker
+
+Copyright (c) 2005, 2007 by Michael Neumann (mneumann@ntecs.de).
+All rights reserved.
+
+== Dependencies
+
+* ruby 1.8.x
+* Wee 0.10.0 (gem install wee)
+* vim (for colorizing sources)
+* html2ps (for creating the Postscript output)
+* ps2pdf (for creating the PDF output)
+
+== Start
+
+  cd directory-where-all-your-presentation-related-files-reside
+  wee-pm presentation-file
+
+Then point your browser to: http://localhost:2000/
+
+== Navigation
+
+* Page-Up/-Down: Previous/Next slide/overlay.
+
+* Key 's': toggle slide/overlay mode. 
+
+* Key 'e': enter edit mode.
+
+* Next overlay/slide: Click with the mouse on the slide-title. 
+
+* Switch to edit-mode: Position the mouse into the top-left corner of the
+  frame, you'll notice a hover-effect. Then click. 
+
+== Presentation file format
+
+Pure rdoc! Each level-one heading ("=") generates a slide.
+
+== RDoc extensions
+
+To colorize sourcecode, use a verbatim block like this:
+
+  !!colorize:ruby
+  def method_a
+  end
+
+Note that you'll need +vim+ to be installed on your system.
+
+== Generating PDF
+
+  wee-pm-pdf presentation-file > pdf-file
+
+You can tweak the generated PDF file, by editing bin/wee-pm-pdf.  For
+example, if you want to have a PDF that is not intended for printing and
+as such could ommit the URLs to be shown as text, set SHOW_URL to false
+in bin/wee-pm-pdf.
+
+If you need Postscript, then have a look at bin/wee-pm-pdf, and remove
+the "| ps2pdf - -"  part in the IO.popen line. But you generally don't 
+want this, as the PDF output allows easier navigating, and the links are 
+clickable (if you use AcroRead).

@@ -1,0 +1,49 @@
+#!/usr/local/bin/ruby
+
+begin
+  require 'rubygems'
+rescue LoadError
+end
+
+begin
+  require 'wee-pm/presentation' 
+rescue LoadError
+  $LOAD_PATH << File.join(File.dirname(__FILE__), '../lib')
+end
+
+require 'wee-pm/presentation' 
+require 'wee-pm/converter'
+require 'tempfile'
+
+SHOW_URL = true
+
+pres = Presentation.from_string(File.read(ARGV[0]))
+
+rc = Tempfile.new('html2psrc')
+rc << <<EOS 
+@html2ps { showurl: #{ SHOW_URL ? 1 : 0 }; seq-number: 1; }
+titlepage { content: "<div align=center><h1><big>$[title]</big></h1><h3>$[author]</h3><h4>$[email]</h4></div>" } 
+EOS
+rc.close(false)
+
+io = IO.popen("/usr/bin/perl /usr/local/bin/html2ps --toc hb -f #{ rc.path } --titlepage --hyphenate --underline --web b --colour --frame --landscape | ps2pdf - -", 'w+')
+io << "<html><head><title>#{ pres.title }</title>\n"
+io << %[<meta name="Title" content="#{pres.title}"/>]
+io << %[<meta name="Author" content="#{pres.author}"/>]
+io << %[<meta name="Email" content="#{pres.email}"/>]
+io << "</head><body>"
+io << pres.style || ""
+pres.slides.each do |slide|
+  slide.converter = PsHtmlConverter
+  io << slide.style || ""
+  io << "<h1>#{ slide.title }</h1>\n"
+  slide.render_on(io, slide.number_of_overlays)
+  unless slide.annotations.strip.empty?
+    io << "<hr>"
+    slide.render_annotations_on(io)
+  end
+  io << "<!--NewPage-->\n"
+end
+io << "</body></html>\n"
+io.close_write
+puts io.read

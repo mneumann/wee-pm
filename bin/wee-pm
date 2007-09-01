@@ -1,0 +1,114 @@
+#!/usr/local/bin/ruby
+
+begin
+  require 'rubygems'
+rescue LoadError
+end
+
+require 'wee'
+require 'wee/pageless'
+require 'wee/utils/helper'
+require 'wee/utils/cache'
+require 'wee/utils/autoreload'
+require 'wee/adaptors/webrick'
+begin
+  require 'wee-pm/presentation_maker'
+rescue LoadError
+  $LOAD_PATH << File.join(File.dirname(__FILE__), '../lib')
+end
+require 'wee-pm/presentation_maker'
+
+# Overrides for Wee 0.10.0 to get be able to mount
+# an application as "/".
+class Wee::Request
+  def initialize(app_path, path, headers, fields, cookies)
+    unless app_path == '/'
+      raise ArgumentError, app_path if app_path[-1] == ?/
+    end
+    @app_path, @path, @headers, @cookies = app_path, path, headers, cookies
+    parse_fields(fields)
+    parse_path
+  end
+
+  def build_url(hash={})
+    default = {
+      :request_handler_id => self.request_handler_id,
+      :page_id => self.page_id,
+      :info => self.info
+    }
+    hash = default.update(hash)
+
+    request_handler_id = hash[:request_handler_id]
+    page_id = hash[:page_id]
+    callback_id = hash[:callback_id]
+    info = hash[:info]
+
+    raise ArgumentError if request_handler_id.nil? and not page_id.nil?
+    if not pageless?
+      raise ArgumentError if page_id.nil? and not callback_id.nil?
+    end
+
+    # build request path, e.g. /___/req-id/page-id
+    req_path = make_request_path(request_handler_id, page_id)
+
+    # build the whole url
+    if @app_path == '/'
+      url = "" 
+      if info
+        url << '/'
+        url << info
+      end
+      url << req_path 
+
+      url << '/' if info.nil? and req_path.empty? 
+
+      url << ('?' + callback_id) if callback_id
+    else
+      url = ""
+      url << @app_path
+
+      raise if url[-1] == ?/  # sanity check
+
+      if info
+        url << '/'
+        url << info
+      end
+      url << req_path 
+
+      url << '/' if info.nil? and req_path.empty? 
+
+      url << ('?' + callback_id) if callback_id
+    end
+
+    return url
+  end
+end
+
+class DispatchHandler < WEBrick::HTTPServlet::AbstractServlet 
+  def initialize(server, application, file_dir)
+    super(server)
+    @app_handler = Wee::WEBrickAdaptor.new(server, '/', application, Wee::PagelessRequest)
+    @file_handler = WEBrick::HTTPServlet::FileHandler.new(server, file_dir)
+  end
+
+  def do_GET(req, res)
+    (req.path == '/' ? @app_handler : @file_handler).do_GET(req, res)
+  end
+
+  def do_POST(req, res)
+    (req.path == '/' ? @app_handler : @file_handler).do_POST(req, res)
+  end
+end
+
+def run(presentation_file)
+  comp = proc { PresentationMaker.new(presentation_file) };
+  def comp.new; call end
+  app = Wee::Utils.app_for(comp,
+    :session => Wee::PagelessSession,
+    :application => Wee::PagelessApplication)
+  Wee::WEBrickAdaptor.
+    mount('/', DispatchHandler, app, '.').
+    start
+end
+
+run(ARGV[0])
