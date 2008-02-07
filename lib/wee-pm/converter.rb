@@ -32,6 +32,7 @@ class HtmlConverter
     conv = SlidesHtml.new 
     conv.block_processor = proc {|processor, option, lines|
       port = ""
+      option ||= ""
       case processor
       when 'colorize'
         lang, *more = option.split(",")
@@ -45,6 +46,7 @@ class HtmlConverter
           require 'tempfile'
           f = Tempfile.new('pm')
           f << "#!/bin/sh\n"
+          f << "cd #{h['cd']}\n" if h['cd']
           f << h['exec']
           f << "\nread line\n"
           f.close(false)
@@ -61,7 +63,29 @@ class HtmlConverter
         ColorizeFilter.new.run(lines, port, lang)
         port << "</pre>\n"
       when 'exec'
-        url = @r.url_for_callback(proc { `#{ lines }` })
+        more = option.split(",")
+        h = {}
+        more.map {|i| k, v = i.split("="); h[k] = v}
+
+        require 'tempfile'
+        f = Tempfile.new('pm')
+        f << "#!/bin/sh\n"
+        f << "cd #{h['cd']}\n" if h['cd']
+        f << lines
+        f << "\nread line\n" if h.include?('xterm')
+        f.close(false)
+        File.chmod(0755, f.path)
+
+        cmd = 
+        if h.include?('xterm')
+          "xterm"
+        else
+          "sh"
+        end
+        cmd << " #{f.path}"
+
+        url = @r.url_for_callback(proc { `#{cmd}`; f.unlink })
+        
         port << %[<a class="codelink" href="#{ url }">execute</a>]
         unless option == "hidden"
           port << "<pre class='codefile'>"
