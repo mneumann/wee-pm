@@ -41,6 +41,7 @@ class HtmlConverter
         lines = File.read(h['file']) if h['file']
 
         if h['exec']
+          # TODO: generate executable script in callback.
           require 'tempfile'
           f = Tempfile.new('pm')
           f << "#!/bin/sh\n"
@@ -50,6 +51,9 @@ class HtmlConverter
           File.chmod(0755, f.path)
           url = @r.url_for_callback(proc { `xterm #{ f.path }`; f.unlink })
           port << %[<a class="codelink" href="#{ url }">execute</a>]
+          port << "<pre class='codefile'>"
+        elsif h.include?('link') and h['file']
+          port << %[<a class="codelink" href="#{ h['file'] }">#{ h['file'] }</a>]
           port << "<pre class='codefile'>"
         else
           port << "<pre>"

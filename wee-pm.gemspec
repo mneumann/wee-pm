@@ -2,7 +2,7 @@ require 'rubygems'
 
 spec = Gem::Specification.new do |s|
   s.name = "wee-pm"
-  s.version = "0.1"
+  s.version = "0.2"
   s.summary = "A web-based presentation maker and viewer using Wee"
   s.files = Dir['**/*']
   s.bindir = 'bin'
