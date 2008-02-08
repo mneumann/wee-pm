@@ -41,6 +41,10 @@ class HtmlConverter
 
         lines = File.read(h['file']) if h['file']
 
+        if h.include?('link') and h['file']
+          port << %[<a class="codelink" href="#{ h['file'] }">#{ h['file'] }</a> ]
+        end
+
         if h['exec']
           # TODO: generate executable script in callback.
           require 'tempfile'
@@ -49,17 +53,21 @@ class HtmlConverter
           f << "cd #{h['cd']}\n" if h['cd']
           f << h['exec']
           f << "\nread line\n"
+          f << "rm #{f.path}"
           f.close(false)
           File.chmod(0755, f.path)
-          url = @r.url_for_callback(proc { `xterm #{ f.path }`; f.unlink })
+          cmd = "xterm #{ f.path }"
+
+          url = @r.url_for_callback(proc { spawn cmd })
           port << %[<a class="codelink" href="#{ url }">execute</a>]
-          port << "<pre class='codefile'>"
-        elsif h.include?('link') and h['file']
-          port << %[<a class="codelink" href="#{ h['file'] }">#{ h['file'] }</a>]
+        end
+
+        if (h.include?('link') and h['file']) or h['exec']
           port << "<pre class='codefile'>"
         else
           port << "<pre>"
         end
+
         ColorizeFilter.new.run(lines, port, lang)
         port << "</pre>\n"
       when 'exec'
@@ -73,6 +81,7 @@ class HtmlConverter
         f << "cd #{h['cd']}\n" if h['cd']
         f << lines
         f << "\nread line\n" if h.include?('xterm')
+        f << "rm #{f.path}"
         f.close(false)
         File.chmod(0755, f.path)
 
@@ -84,21 +93,24 @@ class HtmlConverter
         end
         cmd << " #{f.path}"
 
-        url = @r.url_for_callback(proc { `#{cmd}`; f.unlink })
+        url = @r.url_for_callback(proc { spawn cmd })
         
         port << %[<a class="codelink" href="#{ url }">execute</a>]
-        unless option == "hidden"
+        unless h.include?('hidden') or option == "hidden"
           port << "<pre class='codefile'>"
           port << lines
           port << "</pre>\n"
         end
-        #when 'file'
       else
         raise "unknown processor"
       end
       port
     }
     conv
+  end
+
+  def spawn(exec)
+    fork { `#{exec}` }
   end
 
 end
