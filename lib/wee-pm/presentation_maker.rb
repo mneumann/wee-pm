@@ -222,6 +222,12 @@ class PresentationMaker < Wee::Component
           r.text(")")
         end
 
+        if hp = @presentation.homepage
+          r.div.id('author_homepage').with do
+            r.anchor.href(hp).with(hp)
+          end
+        end
+
       end
     elsif @current_slide
       r.div.id('slides').css_class('slide').  with do

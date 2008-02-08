@@ -4,7 +4,7 @@ require 'wee-pm/utils'
 # A presentation is mainly a collection of slides.
 
 class Presentation
-  attr_accessor :title, :author, :email, :style
+  attr_accessor :title, :author, :email, :homepage, :style
   attr_reader :slides
 
   class << self
@@ -17,6 +17,7 @@ class Presentation
         pres.title = $1.strip if slides[0] =~ /^title::(.*)$/
         pres.author = $1.strip if slides[0] =~ /^author::(.*)$/
         pres.email = $1.strip if slides[0] =~ /^email::(.*)$/
+        pres.homepage = $1.strip if slides[0] =~ /^homepage::(.*)$/
         pres.style = $1.strip if slides[0] =~ /^style::(.*)^endstyle::$/m
 
         slides[1..-1].each do |s|
@@ -36,6 +37,7 @@ class Presentation
     @title = 'unnamed presentation'
     @author = ''
     @email = ''
+    @homepage = ''
     @style = ''
     @slides = []
     yield self if block_given?
@@ -44,7 +46,8 @@ class Presentation
   def to_s
     str = "title:: #{ @title }\n" + 
           "author:: #{ @author }\n" + 
-          "email:: #{ @email }\n"
+          "email:: #{ @email }\n" +
+          "homepage:: #{ @homepage }\n"
     unless @style.strip.empty?
       str << "style::\n"
       str << @style

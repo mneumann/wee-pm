@@ -19,10 +19,17 @@ SHOW_URL = true
 
 pres = Presentation.from_string(File.read(ARGV[0]))
 
+homepage =  
+if pres.homepage
+  "<h3>#{pres.homepage}</h3>"
+else
+  ""
+end
+
 rc = Tempfile.new('html2psrc')
 rc << <<EOS 
 @html2ps { showurl: #{ SHOW_URL ? 1 : 0 }; seq-number: 1; }
-titlepage { content: "<div align=center><h1><big>$[title]</big></h1><h3>$[author]</h3><h4>$[email]</h4></div>" } 
+titlepage { content: "<div align=center><h1><big>$[title]</big></h1><h3>$[author]</h3><h4>$[email]</h4>#{homepage}</div>" } 
 EOS
 rc.close(false)
 
@@ -31,11 +38,12 @@ io << "<html><head><title>#{ pres.title }</title>\n"
 io << %[<meta name="Title" content="#{pres.title}"/>]
 io << %[<meta name="Author" content="#{pres.author}"/>]
 io << %[<meta name="Email" content="#{pres.email}"/>]
+io << %[<meta name="Homepage" content="#{pres.homepage}"/>]
 io << "</head><body>"
-io << pres.style || ""
+
 pres.slides.each do |slide|
   slide.converter = PsHtmlConverter
-  io << slide.style || ""
+
   io << "<h1>#{ slide.title }</h1>\n"
   slide.render_on(io, slide.number_of_overlays)
   unless slide.annotations.strip.empty?
